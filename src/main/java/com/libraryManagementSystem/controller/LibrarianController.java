@@ -52,7 +52,7 @@ public class LibrarianController {
     }
 
     @GetMapping("book-by-id/{id}")
-    public ResponseEntity<Book> findByBookId(@PathVariable ObjectId id) {
+    public ResponseEntity<Book> findByBookId(@PathVariable String id) {
         log.info("Fetching book by ID: {}", id);
         Book book = bookService.findByBookId(id).orElse(null);
         if (book == null) {
@@ -80,7 +80,7 @@ public class LibrarianController {
     }
 
     @PutMapping("/update-book-by-id/{id}")
-    public ResponseEntity<?> updateBook(@RequestBody BookDto book, @PathVariable ObjectId id) {
+    public ResponseEntity<?> updateBook(@RequestBody BookDto book, @PathVariable String id) {
         log.info("Updating book with ID: {}", id);
         Book oldBook = bookService.findByBookId(id).orElse(null);
         if (oldBook == null) {
@@ -107,7 +107,7 @@ public class LibrarianController {
     }
 
     @DeleteMapping("/delete-book-by-id/{id}")
-    public ResponseEntity<String> deleteBookById(@PathVariable ObjectId id) {
+    public ResponseEntity<String> deleteBookById(@PathVariable String id) {
         log.info("Attempting to delete book with ID: {}", id);
         Optional<Book> bookOptional = bookService.findByBookId(id);
         if (bookOptional.isEmpty()) {
@@ -125,7 +125,7 @@ public class LibrarianController {
     }
 
     @GetMapping("/issued-book-by-id/{id}")
-    public ResponseEntity<BookIssued> findBookIssuedById(@PathVariable ObjectId id) {
+    public ResponseEntity<BookIssued> findBookIssuedById(@PathVariable String id) {
         log.info("Fetching issued book by ID: {}", id);
         BookIssued bookIssued = bookIssuedService.findById(id).orElse(null);
         if (bookIssued == null) {
@@ -142,7 +142,7 @@ public class LibrarianController {
     }
 
     @DeleteMapping("delete-by/issuedId/{id}/and/userName/{userName}")
-    public ResponseEntity<String> deleteIssuedBook(@PathVariable ObjectId id, @PathVariable String userName) {
+    public ResponseEntity<String> deleteIssuedBook(@PathVariable String id, @PathVariable String userName) {
         log.info("Attempting to delete issued book ID {} for user {}", id, userName);
         User user = userService.findByUserName(userName).orElse(null);
         if (user == null) {

@@ -5,6 +5,6 @@ import lombok.NonNull;
 import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
-public interface BookIssuedRepository extends MongoRepository<BookIssued, ObjectId> {
-    void deleteById(@NonNull ObjectId id);
+public interface BookIssuedRepository extends MongoRepository<BookIssued, String> {
+    void deleteById(String id);
 }

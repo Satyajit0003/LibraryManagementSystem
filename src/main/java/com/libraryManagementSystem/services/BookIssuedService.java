@@ -5,8 +5,11 @@ import com.libraryManagementSystem.entity.BookIssued;
 import com.libraryManagementSystem.entity.User;
 import com.libraryManagementSystem.repository.BookIssuedRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
@@ -27,7 +30,7 @@ public class BookIssuedService {
     private BookService bookService;
 
     @Transactional
-    public void issuedBook(String userName, ObjectId bookId) {
+    public void issuedBook(String userName, String bookId) {
         log.info("Issuing book with ID {} to user {}", bookId, userName);
         Book book = bookService.findByBookId(bookId)
                 .orElseThrow(() -> {
@@ -53,7 +56,9 @@ public class BookIssuedService {
     }
 
     @Transactional
-    public void saveIssuedBook(BookIssued bookIssued, String userName) {
+    @CachePut(value = "bookIssued", key = "#bookIssued.issuedId")
+    @CacheEvict(value = "booksIssued", allEntries = true )
+    public BookIssued saveIssuedBook(BookIssued bookIssued, String userName) {
         log.info("Saving issued book for user {}", userName);
         User user = userService.findByUserName(userName)
                 .orElseThrow(() -> {
@@ -67,10 +72,11 @@ public class BookIssuedService {
         user.getBookIssuedList().add(saved);
         userService.saveUser(user);
         log.info("Updated user {}'s issued book list", userName);
+        return saved;
     }
 
     @Transactional
-    public void returnedBook(ObjectId issuedId, String userName) {
+    public void returnedBook(String issuedId, String userName) {
         log.info("Processing return for issued ID {} by user {}", issuedId, userName);
 
         BookIssued bookIssued = bookIssuedRepository.findById(issuedId)
@@ -110,17 +116,23 @@ public class BookIssuedService {
         log.info("Marked issued book ID {} as returned", issuedId);
     }
 
-    public Optional<BookIssued> findById(ObjectId id) {
+    @Cacheable(value = "bookIssued", key = "#id")
+    public Optional<BookIssued> findById(String id) {
         log.info("Finding BookIssued by ID {}", id);
         return bookIssuedRepository.findById(id);
     }
 
+    @Cacheable(value = "booksIssued")
     public List<BookIssued> getAllIssuedBook() {
         log.info("Fetching all issued books");
         return bookIssuedRepository.findAll();
     }
 
-    public void deleteById(ObjectId id) {
+    @Caching(evict = {
+            @CacheEvict(value = "bookIssued", key = "#id"),
+            @CacheEvict(value = "booksIssued", allEntries = true)
+    })
+    public void deleteById(String id) {
         log.info("Deleting issued book with ID {}", id);
         bookIssuedRepository.deleteById(id);
     }

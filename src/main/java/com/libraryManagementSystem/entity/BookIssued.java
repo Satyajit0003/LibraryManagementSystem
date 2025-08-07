@@ -1,5 +1,6 @@
 package com.libraryManagementSystem.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -16,16 +17,16 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BookIssued {
-
     @Id
-    private ObjectId issuedId;
+    private String issuedId;
 
     @NonNull
-    private ObjectId bookId;
+    private String bookId;
 
-    @CreatedDate
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDate issueDate;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDate returnDate;
 
     private boolean isReturned;

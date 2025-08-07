@@ -1,7 +1,7 @@
 package com.libraryManagementSystem.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
-import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.DBRef;
@@ -17,7 +17,7 @@ import java.util.List;
 public class User {
 
     @Id
-    private ObjectId userId;
+    private String userId;
 
     @NonNull
     @Indexed(unique = true)
@@ -31,6 +31,7 @@ public class User {
 
     private List<String> roles = new ArrayList<>();
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime currentDate = LocalDateTime.now();
 
     @DBRef

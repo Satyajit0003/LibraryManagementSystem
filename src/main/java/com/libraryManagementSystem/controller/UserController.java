@@ -51,7 +51,7 @@ public class UserController {
         log.info("Attempting to delete user with userName: {}", userName);
         Optional<User> userOptional = userService.findByUserName(userName);
         User user = userOptional.get();
-        ObjectId id = user.getUserId();
+        String id = user.getUserId();
         if (!user.getBookIssuedList().isEmpty()) {
             log.warn("Cannot delete user with issued books. ID: {}", id);
             return new ResponseEntity<>("User has issued books and cannot be deleted", HttpStatus.BAD_REQUEST);
@@ -62,7 +62,7 @@ public class UserController {
     }
 
     @GetMapping("/issued/bookId/{id}")
-    public ResponseEntity<String> issued(@PathVariable ObjectId id){
+    public ResponseEntity<String> issued(@PathVariable String id){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userName = authentication.getName();
         Optional<User> userOptional = userService.findByUserName(userName);
@@ -82,7 +82,7 @@ public class UserController {
     }
 
     @GetMapping("/returned/issuedId/{id}")
-    public ResponseEntity<String> returned(@PathVariable ObjectId id) {
+    public ResponseEntity<String> returned(@PathVariable String id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userName = authentication.getName();
         Optional<User> userOptional = userService.findByUserName(userName);

@@ -68,7 +68,7 @@ public class AdminController {
     }
 
     @GetMapping("/user-by-id/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable ObjectId id){
+    public ResponseEntity<User> getUserById(@PathVariable String id){
         log.info("Fetching user by ID: {}", id);
         User user = userService.findById(id).orElse(null);
         if (user == null) {
@@ -79,7 +79,7 @@ public class AdminController {
     }
 
     @DeleteMapping("delete-user-by-id/{id}")
-    public ResponseEntity<String> deleteUserById(@PathVariable ObjectId id) {
+    public ResponseEntity<String> deleteUserById(@PathVariable String id) {
         log.info("Attempting to delete user with ID: {}", id);
         Optional<User> userOptional = userService.findById(id);
         if (userOptional.isEmpty()) {
