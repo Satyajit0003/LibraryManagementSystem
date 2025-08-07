@@ -96,42 +96,7 @@ Try out API requests
 View request/response models
 Authorize using JWT
 
-LibraryManagementSystem/
-├── src/
-│   ├── main/
-│   │   ├── java/
-│   │   │   └── com/
-│   │   │       └── example/
-│   │   │           └── library/
-│   │   │               ├── LibraryManagementSystemApplication.java
-│   │   │               ├── config/
-│   │   │               │   ├── MongoConfig.java
-│   │   │               │   ├── RedisConfig.java
-│   │   │               │   ├── KafkaConfig.java
-│   │   │               │   └── SwaggerConfig.java
-│   │   │               ├── controller/
-│   │   │               │   └── BookController.java
-│   │   │               ├── service/
-│   │   │               │   └── BookService.java
-│   │   │               ├── repository/
-│   │   │               │   └── BookRepository.java
-│   │   │               ├── model/
-│   │   │               │   └── Book.java
-│   │   │               └── dto/
-│   │   │                   └── BookDto.java
-│   │   ├── resources/
-│   │   │   ├── application.properties
-│   │   │   └── static/
-│   │   │   └── templates/
-│   ├── test/
-│   │   └── java/
-│   │       └── com/
-│   │           └── example/
-│   │               └── library/
-│   │                   └── service/
-│   │                       └── BookServiceTest.java
-├── pom.xml
-└── README.md
+For file structure use this google drive link https://docs.google.com/document/d/1sE1T7Yw--64LJw9WjJRSTiC2WIE6WHKWCa3pI7ZJz2c/edit?usp=drive_link
 
 config/: Configuration classes for MongoDB, Redis, Kafka, Swagger, etc.
 controller/: REST controllers.
