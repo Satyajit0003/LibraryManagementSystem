@@ -3,6 +3,8 @@ package com.libraryManagementSystem.controller;
 import com.libraryManagementSystem.dto.UserDto;
 import com.libraryManagementSystem.entity.User;
 import com.libraryManagementSystem.services.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,16 +17,19 @@ import java.util.Optional;
 @Slf4j
 @RestController
 @RequestMapping("/admin")
+@Tag(name = "Admin APIs")
 public class AdminController {
 
     @Autowired
     private UserService userService;
 
     @GetMapping("health-check")
+    @Operation(summary = "APIs for health check")
     public String checkHealth(){
         return "Ok";
     }
 
+    @Operation(summary = "Create a new user with ADMIN role")
     @PostMapping("/signup-admin")
     public ResponseEntity<?> signupAdmin(@RequestBody UserDto user) {
         log.info("Creating user with username: {}", user.getUserName());
@@ -43,6 +48,7 @@ public class AdminController {
         }
     }
 
+    @Operation(summary = "Create a new user with LIBRARIAN role")
     @PostMapping("/signup-librarian")
     public ResponseEntity<?> signupLibrarian(@RequestBody UserDto user) {
         log.info("Creating user with username: {}", user.getUserName());
@@ -61,12 +67,14 @@ public class AdminController {
         }
     }
 
+    @Operation(summary = "Get all users")
     @GetMapping("/all-users")
     public ResponseEntity<List<User>> getAllUsers() {
         log.info("Fetching all users");
         return new ResponseEntity<>(userService.getAllUsers(), HttpStatus.OK);
     }
 
+    @Operation(summary = "Get user by ID")
     @GetMapping("/user-by-id/{id}")
     public ResponseEntity<User> getUserById(@PathVariable String id){
         log.info("Fetching user by ID: {}", id);
@@ -78,6 +86,7 @@ public class AdminController {
         return ResponseEntity.ok(user);
     }
 
+    @Operation(summary = "Delete user by ID")
     @DeleteMapping("delete-user-by-id/{id}")
     public ResponseEntity<String> deleteUserById(@PathVariable String id) {
         log.info("Attempting to delete user with ID: {}", id);
@@ -96,6 +105,7 @@ public class AdminController {
         return ResponseEntity.ok("User deleted successfully");
     }
 
+    @Operation(summary = "Get user by username")
     @GetMapping("user-by-username/{userName}")
     public ResponseEntity<User> getUserByUserName(@PathVariable String userName) {
         log.info("Fetching user by username: {}", userName);

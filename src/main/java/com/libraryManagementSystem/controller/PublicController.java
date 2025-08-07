@@ -6,6 +6,8 @@ import com.libraryManagementSystem.services.BookIssuedService;
 import com.libraryManagementSystem.services.UserDetailsServiceImpl;
 import com.libraryManagementSystem.services.UserService;
 import com.libraryManagementSystem.utilis.JwtUtil;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,6 +22,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/public")
 @Slf4j
+@Tag(name = "Public APIs")
 public class PublicController {
 
     @Autowired
@@ -38,6 +41,7 @@ public class PublicController {
     private JwtUtil jwtUtil;
 
     @PostMapping("/signup")
+    @Operation(summary = "Create a new user")
     public ResponseEntity<?> signup(@RequestBody UserDto user) {
         log.info("Creating user with username: {}", user.getUserName());
         try {
@@ -55,7 +59,7 @@ public class PublicController {
         }
     }
 
-
+    @Operation(summary = "Login user and return JWT token")
     @PostMapping("/login")
     public ResponseEntity<String> login(@RequestBody UserDto userDTO) {
         try {

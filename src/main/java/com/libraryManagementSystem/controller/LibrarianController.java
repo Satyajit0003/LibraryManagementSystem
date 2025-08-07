@@ -7,8 +7,9 @@ import com.libraryManagementSystem.entity.User;
 import com.libraryManagementSystem.services.BookIssuedService;
 import com.libraryManagementSystem.services.BookService;
 import com.libraryManagementSystem.services.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
-import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,7 @@ import java.util.Optional;
 @Slf4j
 @RestController
 @RequestMapping("/librarian")
+@Tag(name = "Librarian APIs")
 public class LibrarianController {
 
     @Autowired
@@ -32,6 +34,7 @@ public class LibrarianController {
     private UserService userService;
 
     @PostMapping("create-book")
+    @Operation(summary = "Create a new book")
     public ResponseEntity<?> createBook(@RequestBody BookDto book) {
         try {
             Book newBook = new Book();
@@ -52,6 +55,7 @@ public class LibrarianController {
     }
 
     @GetMapping("book-by-id/{id}")
+    @Operation(summary = "Find book by ID")
     public ResponseEntity<Book> findByBookId(@PathVariable String id) {
         log.info("Fetching book by ID: {}", id);
         Book book = bookService.findByBookId(id).orElse(null);
@@ -62,6 +66,7 @@ public class LibrarianController {
         return ResponseEntity.ok(book);
     }
 
+    @Operation(summary = "Find book by name")
     @GetMapping("/book-by-bookname/{bookName}")
     public ResponseEntity<Book> findByBookName(@PathVariable String bookName) {
         log.info("Fetching book by name: {}", bookName);
@@ -74,12 +79,14 @@ public class LibrarianController {
     }
 
     @GetMapping("all-books")
+    @Operation(summary = "Get all books")
     public ResponseEntity<List<Book>> getAllBooks() {
         log.info("Fetching all books");
         return new ResponseEntity<>(bookService.getAllBook(), HttpStatus.OK);
     }
 
     @PutMapping("/update-book-by-id/{id}")
+    @Operation(summary = "Update book by ID")
     public ResponseEntity<?> updateBook(@RequestBody BookDto book, @PathVariable String id) {
         log.info("Updating book with ID: {}", id);
         Book oldBook = bookService.findByBookId(id).orElse(null);
@@ -100,12 +107,14 @@ public class LibrarianController {
     }
 
     @GetMapping("books-by/semester/{semester}/and/branch/{branch}")
+    @Operation(summary = "Get all books by semester and branch")
     public ResponseEntity<List<Book>> getAllBookBySemAndBranch(@PathVariable int semester, @PathVariable String branch) {
         log.info("Fetching books for Semester: {}, Branch: {}", semester, branch);
         List<Book> books = bookService.findBySemesterAndBranch(semester, branch);
         return new ResponseEntity<>(books, HttpStatus.OK);
     }
 
+    @Operation(summary = "Delete book by ID")
     @DeleteMapping("/delete-book-by-id/{id}")
     public ResponseEntity<String> deleteBookById(@PathVariable String id) {
         log.info("Attempting to delete book with ID: {}", id);
@@ -124,6 +133,7 @@ public class LibrarianController {
         return ResponseEntity.ok("Book deleted successfully");
     }
 
+    @Operation(summary = "All issued books by id")
     @GetMapping("/issued-book-by-id/{id}")
     public ResponseEntity<BookIssued> findBookIssuedById(@PathVariable String id) {
         log.info("Fetching issued book by ID: {}", id);
@@ -135,12 +145,14 @@ public class LibrarianController {
         return ResponseEntity.ok(bookIssued);
     }
 
+    @Operation(summary = "Get all issued books")
     @GetMapping("/all-issued-book")
     public ResponseEntity<List<BookIssued>> getAllBookIssued() {
         log.info("Fetching all issued books");
         return new ResponseEntity<>(bookIssuedService.getAllIssuedBook(), HttpStatus.OK);
     }
 
+    @Operation(summary = "Delete issued book by ID and user name")
     @DeleteMapping("delete-by/issuedId/{id}/and/userName/{userName}")
     public ResponseEntity<String> deleteIssuedBook(@PathVariable String id, @PathVariable String userName) {
         log.info("Attempting to delete issued book ID {} for user {}", id, userName);
