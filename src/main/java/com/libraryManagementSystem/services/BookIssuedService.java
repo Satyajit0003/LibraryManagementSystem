@@ -1,5 +1,6 @@
 package com.libraryManagementSystem.services;
 
+import com.libraryManagementSystem.dto.EmailEvent;
 import com.libraryManagementSystem.entity.Book;
 import com.libraryManagementSystem.entity.BookIssued;
 import com.libraryManagementSystem.entity.User;
@@ -13,6 +14,7 @@ import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,8 +31,16 @@ public class BookIssuedService {
     @Autowired
     private BookService bookService;
 
+    @Autowired
+    private KafkaProducerService kafkaProducerService;
+
     @Transactional
     public void issuedBook(String userName, String bookId) {
+        User user = userService.findByUserName(userName).orElse(null);
+        if(user == null) {
+            log.error("User not found: {}", userName);
+            throw new RuntimeException("User not found");
+        }
         log.info("Issuing book with ID {} to user {}", bookId, userName);
         Book book = bookService.findByBookId(bookId)
                 .orElseThrow(() -> {
@@ -49,30 +59,21 @@ public class BookIssuedService {
 
         BookIssued bookIssued = new BookIssued();
         bookIssued.setBookId(bookId);
-        bookIssued.setIssueDate(LocalDate.now());
+        bookIssued.setIssueDate(LocalDateTime.now().toString());
         bookIssued.setReturned(false);
 
+        EmailEvent emailEvent = new EmailEvent(
+                user.getEmail(),
+                "Book Issued Notification",
+                String.format("Dear %s, you have successfully issued the book '%s' on %s. Please return it by %s.",
+                        user.getUserName(),
+                        book.getBookName(),
+                        LocalDate.now(),
+                        LocalDate.now().plusDays(14))
+        );
+        log.info("Sending email notification for issued book to user {}", userName);
+        kafkaProducerService.produceEmailNotification(emailEvent);
         saveIssuedBook(bookIssued, userName);
-    }
-
-    @Transactional
-    @CachePut(value = "bookIssued", key = "#bookIssued.issuedId")
-    @CacheEvict(value = "booksIssued", allEntries = true )
-    public BookIssued saveIssuedBook(BookIssued bookIssued, String userName) {
-        log.info("Saving issued book for user {}", userName);
-        User user = userService.findByUserName(userName)
-                .orElseThrow(() -> {
-                    log.error("User not found: {}", userName);
-                    return new RuntimeException("User not found");
-                });
-
-        BookIssued saved = bookIssuedRepository.save(bookIssued);
-        log.info("BookIssued record saved with ID {}", saved.getIssuedId());
-
-        user.getBookIssuedList().add(saved);
-        userService.saveUser(user);
-        log.info("Updated user {}'s issued book list", userName);
-        return saved;
     }
 
     @Transactional
@@ -111,9 +112,40 @@ public class BookIssuedService {
         userService.saveUser(user);
 
         bookIssued.setReturned(true);
-        bookIssued.setReturnDate(LocalDate.now());
+        bookIssued.setReturnDate(LocalDateTime.now().toString());
         bookIssuedRepository.save(bookIssued);
+
+        EmailEvent emailEvent = new EmailEvent(
+                user.getEmail(),
+                "Book Return Notification",
+                String.format("Dear %s, you have successfully returned the book '%s' on %s.",
+                        user.getUserName(),
+                        book.getBookName(),
+                        LocalDate.now())
+        );
+        log.info("Sending email notification for returned book to user {}", userName);
+        kafkaProducerService.produceEmailNotification(emailEvent);
         log.info("Marked issued book ID {} as returned", issuedId);
+    }
+
+    @Transactional
+    @CachePut(value = "bookIssued", key = "#bookIssued.issuedId")
+    @CacheEvict(value = "booksIssued", allEntries = true )
+    public BookIssued saveIssuedBook(BookIssued bookIssued, String userName) {
+        log.info("Saving issued book for user {}", userName);
+        User user = userService.findByUserName(userName)
+                .orElseThrow(() -> {
+                    log.error("User not found: {}", userName);
+                    return new RuntimeException("User not found");
+                });
+
+        BookIssued saved = bookIssuedRepository.save(bookIssued);
+        log.info("BookIssued record saved with ID {}", saved.getIssuedId());
+
+        user.getBookIssuedList().add(saved);
+        userService.saveUser(user);
+        log.info("Updated user {}'s issued book list", userName);
+        return saved;
     }
 
     @Cacheable(value = "bookIssued", key = "#id")
