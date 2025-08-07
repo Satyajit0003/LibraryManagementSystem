@@ -99,39 +99,23 @@ Authorize using JWT
 LibraryManagementSystem/
 ├── src/
 │   ├── main/
-│   │   ├── java/
-│   │   │   └── com/
-│   │   │       └── example/
-│   │   │           └── library/
-│   │   │               ├── LibraryManagementSystemApplication.java
-│   │   │               ├── config/
-│   │   │               │   ├── MongoConfig.java
-│   │   │               │   ├── RedisConfig.java
-│   │   │               │   ├── KafkaConfig.java
-│   │   │               │   └── SwaggerConfig.java
-│   │   │               ├── controller/
-│   │   │               │   └── BookController.java
-│   │   │               ├── service/
-│   │   │               │   └── BookService.java
-│   │   │               ├── repository/
-│   │   │               │   └── BookRepository.java
-│   │   │               ├── model/
-│   │   │               │   └── Book.java
-│   │   │               └── dto/
-│   │   │                   └── BookDto.java
-│   │   ├── resources/
-│   │   │   ├── application.properties
-│   │   │   └── static/
-│   │   │   └── templates/
-│   ├── test/
-│   │   └── java/
-│   │       └── com/
-│   │           └── example/
-│   │               └── library/
-│   │                   └── service/
-│   │                       └── BookServiceTest.java
+│   │   ├── java/com/example/library/
+│   │   │   ├── LibraryManagementSystemApplication.java
+│   │   │   ├── config/               # Mongo, Redis, Kafka, Swagger configs
+│   │   │   ├── controller/           # REST APIs
+│   │   │   ├── service/              # Business logic
+│   │   │   ├── repository/           # MongoDB repositories
+│   │   │   ├── model/                # MongoDB entities
+│   │   │   └── dto/                  # Data Transfer Objects
+│   │   └── resources/
+│   │       ├── application.properties
+│   │       ├── static/
+│   │       └── templates/
+│   └── test/java/com/example/library/
+│       └── service/                  # Unit tests for services
 ├── pom.xml
 └── README.md
+
 
 config/: Configuration classes for MongoDB, Redis, Kafka, Swagger, etc.
 controller/: REST controllers.
