@@ -1,8 +1,9 @@
 package com.libraryManagementSystem.controller;
 
+import com.libraryManagementSystem.constants.Log;
 import com.libraryManagementSystem.dto.UserDto;
 import com.libraryManagementSystem.entity.User;
-import com.libraryManagementSystem.services.BookIssuedService;
+import com.libraryManagementSystem.enums.Role;
 import com.libraryManagementSystem.services.UserDetailsServiceImpl;
 import com.libraryManagementSystem.services.UserService;
 import com.libraryManagementSystem.utilis.JwtUtil;
@@ -17,8 +18,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/public")
 @Slf4j
@@ -27,9 +26,6 @@ public class PublicController {
 
     @Autowired
     private UserService userService;
-
-    @Autowired
-    private BookIssuedService bookIssuedService;
 
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -42,21 +38,10 @@ public class PublicController {
 
     @PostMapping("/signup")
     @Operation(summary = "Create a new user")
-    public ResponseEntity<?> signup(@RequestBody UserDto user) {
-        log.info("Creating user with username: {}", user.getUserName());
-        try {
-            User newUser = new User();
-            newUser.setUserName(user.getUserName());
-            newUser.setEmail(user.getEmail());
-            newUser.setPassword(user.getPassword());
-            newUser.setRoles(List.of("USER"));
-            userService.saveUser(newUser);
-            log.info("User created successfully: {}", newUser.getUserName());
-            return new ResponseEntity<>(newUser, HttpStatus.CREATED);
-        } catch (Exception e) {
-            log.error("Error creating user: {}", e.getMessage(), e);
-            return new ResponseEntity<>("Error: " + e.getMessage(), HttpStatus.BAD_REQUEST);
-        }
+    public ResponseEntity<?> signup(@RequestBody UserDto userDto) {
+        User newUser = userService.saveUser(userDto, Role.STUDENT.toString());
+        log.info(Log.USER_CREATED, Role.STUDENT.toString(), newUser.getUserName());
+        return new ResponseEntity<>(newUser, HttpStatus.CREATED);
     }
 
     @Operation(summary = "Login user and return JWT token")
@@ -71,9 +56,9 @@ public class PublicController {
 
             return new ResponseEntity<>(jwt, HttpStatus.OK);
         } catch (Exception e) {
-            log.error("Exception occurred while creating authentication token", e);
+            log.error(Log.AUTHENTICATION_ERROR, e);
             return new ResponseEntity<>("Incorrect username or password", HttpStatus.BAD_REQUEST);
         }
     }
-
 }
+

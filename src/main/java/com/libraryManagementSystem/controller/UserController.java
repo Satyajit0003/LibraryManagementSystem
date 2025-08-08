@@ -2,8 +2,8 @@ package com.libraryManagementSystem.controller;
 
 import com.libraryManagementSystem.dto.UserDto;
 import com.libraryManagementSystem.entity.User;
-import com.libraryManagementSystem.services.BookIssuedService;
-import com.libraryManagementSystem.services.UserService;
+import com.libraryManagementSystem.services.BookIssuedServiceImpl;
+import com.libraryManagementSystem.services.UserServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -22,10 +22,10 @@ import java.util.Optional;
 public class UserController {
 
     @Autowired
-    private UserService userService;
+    private UserServiceImpl userServiceImpl;
 
     @Autowired
-    private BookIssuedService bookIssuedService;
+    private BookIssuedServiceImpl bookIssuedServiceImpl;
 
     @PutMapping("update-user")
     @Operation(summary = "Update User Details")
@@ -33,7 +33,7 @@ public class UserController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userName = authentication.getName();
         log.info("Updating user with username: {}", userName);
-        User oldUser = userService.findByUserName(userName).orElse(null);
+        User oldUser = userServiceImpl.findByUserName(userName).orElse(null);
         if (oldUser == null) {
             log.warn("User not found: {}", userName);
             return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
@@ -41,7 +41,7 @@ public class UserController {
         oldUser.setUserName(user.getUserName());
         oldUser.setPassword(user.getPassword());
         oldUser.setEmail(user.getEmail());
-        userService.saveUser(oldUser);
+        userServiceImpl.saveUser(oldUser);
         log.info("User updated successfully: {}", user.getUserName());
         return ResponseEntity.ok(oldUser);
     }
@@ -52,14 +52,14 @@ public class UserController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userName = authentication.getName();
         log.info("Attempting to delete user with userName: {}", userName);
-        Optional<User> userOptional = userService.findByUserName(userName);
+        Optional<User> userOptional = userServiceImpl.findByUserName(userName);
         User user = userOptional.get();
         String id = user.getUserId();
         if (!user.getBookIssuedList().isEmpty()) {
             log.warn("Cannot delete user with issued books. ID: {}", id);
             return new ResponseEntity<>("User has issued books and cannot be deleted", HttpStatus.BAD_REQUEST);
         }
-        userService.deleteById(id);
+        userServiceImpl.deleteById(id);
         log.info("User deleted successfully. ID: {}", id);
         return ResponseEntity.ok("User deleted successfully");
     }
@@ -69,14 +69,14 @@ public class UserController {
     public ResponseEntity<String> issued(@PathVariable String id){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userName = authentication.getName();
-        Optional<User> userOptional = userService.findByUserName(userName);
+        Optional<User> userOptional = userServiceImpl.findByUserName(userName);
         if (userOptional.isEmpty()) {
             log.warn("Authenticated user not found: {}", userName);
             return new ResponseEntity<>("User not found or may be deleted", HttpStatus.NOT_FOUND);
         }
         log.info("Issuing book with ID {} to user {}", id, userName);
         try {
-            bookIssuedService.issuedBook(userName, id);
+            bookIssuedServiceImpl.issuedBook(userName, id);
             log.info("Book issued successfully to user {}", userName);
             return ResponseEntity.ok("Issued book successfully");
         } catch (Exception e) {
@@ -90,7 +90,7 @@ public class UserController {
     public ResponseEntity<String> returned(@PathVariable String id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userName = authentication.getName();
-        Optional<User> userOptional = userService.findByUserName(userName);
+        Optional<User> userOptional = userServiceImpl.findByUserName(userName);
         if (userOptional.isEmpty()) {
             log.warn("Authenticated user not found: {}", userName);
             return new ResponseEntity<>("User not found or may be deleted", HttpStatus.NOT_FOUND);
@@ -102,7 +102,7 @@ public class UserController {
         }
         log.info("Returning issued book ID {} for user {}", id, userName);
         try {
-            bookIssuedService.returnedBook(id, userName);
+            bookIssuedServiceImpl.returnedBook(id, userName);
             log.info("Book returned successfully by user {}", userName);
             return ResponseEntity.ok("Returned book successfully");
         } catch (Exception e) {
