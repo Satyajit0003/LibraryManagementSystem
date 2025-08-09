@@ -1,9 +1,11 @@
 package com.libraryManagementSystem.controller;
 
 import com.libraryManagementSystem.dto.UserDto;
+import com.libraryManagementSystem.entity.Book;
 import com.libraryManagementSystem.entity.BookIssued;
 import com.libraryManagementSystem.entity.User;
 import com.libraryManagementSystem.services.BookIssuedService;
+import com.libraryManagementSystem.services.BookService;
 import com.libraryManagementSystem.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -26,6 +30,9 @@ public class UserController {
 
     @Autowired
     private BookIssuedService bookIssuedService;
+
+    @Autowired
+    private BookService bookService;
 
     @PutMapping("update-user")
     @Operation(summary = "Update User Details")
@@ -41,6 +48,22 @@ public class UserController {
         String userName = userService.deleteUser();
         log.info("User [{}] deleted successfully", userName);
         return ResponseEntity.ok("User deleted successfully");
+    }
+
+    @Operation(summary = "Find book by name")
+    @GetMapping("/book-by-bookname/{bookName}")
+    public ResponseEntity<Book> findByBookName(@PathVariable String bookName) {
+        Book book = bookService.findByBookName(bookName);
+        log.info("Fetched book details for book name: [{}]", bookName);
+        return ResponseEntity.ok(book);
+    }
+
+    @GetMapping("books-by/semester/{semester}/and/branch/{branch}")
+    @Operation(summary = "Get all books by semester and branch")
+    public ResponseEntity<List<Book>> getAllBookBySemAndBranch(@PathVariable int semester, @PathVariable String branch) {
+        List<Book> bySemesterAndBranch = bookService.findBySemesterAndBranch(semester, branch);
+        log.info("Fetched books for semester [{}] and branch [{}]", semester, branch);
+        return ResponseEntity.ok(bySemesterAndBranch);
     }
 
     @Operation(summary = "Issue Book to User by Book ID")

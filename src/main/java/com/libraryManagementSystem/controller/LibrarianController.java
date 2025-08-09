@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,13 +46,6 @@ public class LibrarianController {
         return ResponseEntity.ok(book);
     }
 
-    @Operation(summary = "Find book by name")
-    @GetMapping("/book-by-bookname/{bookName}")
-    public ResponseEntity<Book> findByBookName(@PathVariable String bookName) {
-        Book book = bookService.findByBookName(bookName);
-        log.info("Fetched book details for book name: [{}]", bookName);
-        return ResponseEntity.ok(book);
-    }
 
     @GetMapping("all-books")
     @Operation(summary = "Get all books")
@@ -68,14 +60,6 @@ public class LibrarianController {
         Book book = bookService.updateBook(bookDto, id);
         log.info("Updated book details for ID: [{}]", id);
         return ResponseEntity.ok(book);
-    }
-
-    @GetMapping("books-by/semester/{semester}/and/branch/{branch}")
-    @Operation(summary = "Get all books by semester and branch")
-    public ResponseEntity<List<Book>> getAllBookBySemAndBranch(@PathVariable int semester, @PathVariable String branch) {
-        List<Book> bySemesterAndBranch = bookService.findBySemesterAndBranch(semester, branch);
-        log.info("Fetched books for semester [{}] and branch [{}]", semester, branch);
-        return ResponseEntity.ok(bySemesterAndBranch);
     }
 
     @Operation(summary = "Delete book by ID")
