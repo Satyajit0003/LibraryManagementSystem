@@ -10,6 +10,8 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -27,7 +29,7 @@ public class UserServiceImpl implements UserService{
 
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    @CachePut(value = "user", key = "#user.userId")
+    @CachePut(value = "user", key = "#result.userId")
     @CacheEvict(value = "users", allEntries = true)
     public User saveUser(UserDto userDto, String role) {
         Optional<User> existing = userRepository.findByUserName(userDto.getUserName());
@@ -83,5 +85,41 @@ public class UserServiceImpl implements UserService{
         }
         User user = userOptional.get();
         return user;
+    }
+
+    @Cacheable(value = "user", key = "#result.userId")
+    @CacheEvict(value = "users", allEntries = true)
+    public User updateUser(UserDto userDto) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userName = authentication.getName();
+        Optional<User> userOptional = userRepository.findByUserName(userName);
+        if (userOptional.isEmpty()) {
+            throw new UserNotFoundException("User not found");
+        }
+        User oldUser = userOptional.get();
+        oldUser.setUserName(userDto.getUserName());
+        oldUser.setPassword(userDto.getPassword());
+        oldUser.setEmail(userDto.getEmail());
+        userRepository.save(oldUser);
+        return oldUser;
+    }
+
+    @Caching(evict = {
+            @CacheEvict(value = "user", key = "#userName"),
+            @CacheEvict(value = "users", allEntries = true)
+    })
+    public String deleteUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userName = authentication.getName();
+        Optional<User> userOptional = userRepository.findByUserName(userName);
+        if (userOptional.isEmpty()) {
+            throw new UserNotFoundException("User not found");
+        }
+        User user = userOptional.get();
+        if (!user.getBookIssuedList().isEmpty()) {
+            throw new RuntimeException("User has issued books and cannot be deleted");
+        }
+        userRepository.delete(user);
+        return userName;
     }
 }

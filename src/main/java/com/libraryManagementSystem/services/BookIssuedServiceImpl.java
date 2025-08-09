@@ -4,6 +4,10 @@ import com.libraryManagementSystem.dto.EmailEvent;
 import com.libraryManagementSystem.entity.Book;
 import com.libraryManagementSystem.entity.BookIssued;
 import com.libraryManagementSystem.entity.User;
+import com.libraryManagementSystem.exception.BookIssuedNotFoundException;
+import com.libraryManagementSystem.exception.BookNotAvailableException;
+import com.libraryManagementSystem.exception.BookNotFoundException;
+import com.libraryManagementSystem.exception.UserNotFoundException;
 import com.libraryManagementSystem.repository.BookIssuedRepository;
 import com.libraryManagementSystem.repository.BookRepository;
 import com.libraryManagementSystem.repository.UserRepository;
@@ -13,6 +17,8 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,10 +26,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Slf4j
-public class BookIssuedServiceImpl {
+public class BookIssuedServiceImpl implements BookIssuedService{
 
     @Autowired
     private BookIssuedRepository bookIssuedRepository;
@@ -32,44 +39,45 @@ public class BookIssuedServiceImpl {
     private UserRepository userRepository;
 
     @Autowired
-    private UserServiceImpl userServiceImpl;
-
-    @Autowired
-    private BookServiceImpl bookServiceImpl;
-
-    @Autowired
     private BookRepository bookRepository;
 
     @Autowired
     private KafkaProducerService kafkaProducerService;
 
     @Transactional
-    public void issuedBook(String userName, String bookId) {
-        User user = userServiceImpl.findByUserName(userName).orElse(null);
-        if (user == null) {
-            log.error("User not found: {}", userName);
-            throw new RuntimeException("User not found");
+    @CachePut(value = "issuedBook", key = "#result.issuedId")
+    @CacheEvict(value = "issuedBooks", allEntries = true)
+    public BookIssued issuedBook(String bookId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userName = authentication.getName();
+        Optional<User> userOptional = userRepository.findByUserName(userName);
+        if (userOptional.isEmpty()) {
+            throw new UserNotFoundException("User not found or may be deleted");
         }
-        log.info("Issuing book with ID {} to user {}", bookId, userName);
-        Book book = bookServiceImpl.findByBookId(bookId)
-                .orElseThrow(() -> {
-                    log.error("Book not found with ID {}", bookId);
-                    return new RuntimeException("Book not found");
-                });
+
+        Optional<Book> bookOptional = bookRepository.findById(bookId);
+        if(bookOptional.isEmpty()){
+            throw new BookNotFoundException("Book not found");
+        }
+
+        User user = userOptional.get();
+        Book book = bookOptional.get();
 
         if (book.getAvailableCopies() <= 0) {
-            log.warn("No available copies for book ID {}", bookId);
-            throw new RuntimeException("No available copies to issue");
+            throw new BookNotAvailableException("No available copies to issue");
         }
 
-        book.setAvailableCopies(book.getAvailableCopies() - 1);
-        bookRepository.save(book);
-        log.info("Decreased available copies for book ID {}. New available copies: {}", bookId, book.getAvailableCopies());
-
         BookIssued bookIssued = new BookIssued();
+        bookIssued.setIssuedId(UUID.randomUUID().toString());
         bookIssued.setBookId(bookId);
         bookIssued.setIssueDate(LocalDateTime.now().toString());
         bookIssued.setReturned(false);
+
+        book.setAvailableCopies(book.getAvailableCopies() - 1);
+        bookRepository.save(book);
+        user.getBookIssuedList().add(bookIssued);
+        userRepository.save(user);
+        bookIssuedRepository.save(bookIssued);
 
         EmailEvent emailEvent = new EmailEvent(
                 user.getEmail(),
@@ -80,46 +88,45 @@ public class BookIssuedServiceImpl {
                         LocalDate.now(),
                         LocalDate.now().plusDays(14))
         );
-        log.info("Sending email notification for issued book to user {}", userName);
         kafkaProducerService.produceEmailNotification(emailEvent);
-        saveIssuedBook(bookIssued, userName);
+        return bookIssued;
     }
 
     @Transactional
-    public void returnedBook(String issuedId, String userName) {
-        log.info("Processing return for issued ID {} by user {}", issuedId, userName);
+    @CachePut(value = "issuedBook", key = "#result.issuedId")
+    @CacheEvict(value = "issuedBooks", allEntries = true)
+    public BookIssued returnedBook(String issuedId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userName = authentication.getName();
 
-        BookIssued bookIssued = bookIssuedRepository.findById(issuedId)
-                .orElseThrow(() -> {
-                    log.error("Issued book not found with ID {}", issuedId);
-                    return new RuntimeException("Issued book not found");
-                });
+        Optional<User> userOptional = userRepository.findByUserName(userName);
+        if (userOptional.isEmpty()) {
+            throw new UserNotFoundException("User not found or may be deleted");
+        }
 
-        Book book = bookServiceImpl.findByBookId(bookIssued.getBookId())
-                .orElseThrow(() -> {
-                    log.error("Book not found with ID {}", bookIssued.getBookId());
-                    return new RuntimeException("Book not found");
-                });
+        Optional<BookIssued> bookIssuedOptional = bookIssuedRepository.findById(issuedId);
+        if(bookIssuedOptional.isEmpty()) {
+            throw new BookIssuedNotFoundException("Issued book not found");
+        }
 
-        User user = userServiceImpl.findByUserName(userName)
-                .orElseThrow(() -> {
-                    log.error("User not found: {}", userName);
-                    return new RuntimeException("User not found");
-                });
+        BookIssued bookIssued = bookIssuedOptional.get();
+
+        Optional<Book> bookOptional = bookRepository.findById(bookIssued.getBookId());
+        if(bookOptional.isEmpty()){
+            throw new BookNotFoundException("Book not found");
+        }
+
+        User user = userOptional.get();
+        Book book = bookOptional.get();
+
+        boolean removed = user.getBookIssuedList().removeIf(b -> b.getIssuedId().equals(issuedId));
+        if (!removed) {
+            throw  new BookIssuedNotFoundException("Issued book not found for this user");
+        }
 
         book.setAvailableCopies(book.getAvailableCopies() + 1);
         bookRepository.save(book);
-        log.info("Increased available copies for book ID {}. New available copies: {}", book.getBookId(), book.getAvailableCopies());
-
-        boolean removed = user.getBookIssuedList().removeIf(b -> b.getIssuedId().equals(issuedId));
-        if (removed) {
-            log.info("Removed issued book ID {} from user {}'s list", issuedId, userName);
-        } else {
-            log.warn("Issued book ID {} not found in user {}'s list", issuedId, userName);
-        }
-
         userRepository.save(user);
-
         bookIssued.setReturned(true);
         bookIssued.setReturnDate(LocalDateTime.now().toString());
         bookIssuedRepository.save(bookIssued);
@@ -134,47 +141,58 @@ public class BookIssuedServiceImpl {
         );
         log.info("Sending email notification for returned book to user {}", userName);
         kafkaProducerService.produceEmailNotification(emailEvent);
-        log.info("Marked issued book ID {} as returned", issuedId);
+
+        return bookIssued;
     }
 
-    @Transactional
-    @CachePut(value = "bookIssued", key = "#bookIssued.issuedId")
-    @CacheEvict(value = "booksIssued", allEntries = true)
-    public BookIssued saveIssuedBook(BookIssued bookIssued, String userName) {
-        log.info("Saving issued book for user {}", userName);
-        User user = userServiceImpl.findByUserName(userName)
-                .orElseThrow(() -> {
-                    log.error("User not found: {}", userName);
-                    return new RuntimeException("User not found");
-                });
-
-        BookIssued saved = bookIssuedRepository.save(bookIssued);
-        log.info("BookIssued record saved with ID {}", saved.getIssuedId());
-
-        user.getBookIssuedList().add(saved);
-        userRepository.save(user);
-        log.info("Updated user {}'s issued book list", userName);
-        return saved;
+    @Cacheable(value = "issuedBook", key = "#id")
+    public BookIssued findById(String id) {
+        Optional<BookIssued> bookIssuedOptional = bookIssuedRepository.findById(id);
+        if(bookIssuedOptional.isEmpty()) {
+            throw new BookIssuedNotFoundException("Issued book not found");
+        }
+        BookIssued bookIssued = bookIssuedOptional.get();
+        return bookIssued;
     }
 
-    @Cacheable(value = "bookIssued", key = "#id")
-    public Optional<BookIssued> findById(String id) {
-        log.info("Finding BookIssued by ID {}", id);
-        return bookIssuedRepository.findById(id);
-    }
-
-    @Cacheable(value = "booksIssued")
+    @Cacheable(value = "issuedBooks")
     public List<BookIssued> getAllIssuedBook() {
-        log.info("Fetching all issued books");
         return bookIssuedRepository.findAll();
     }
 
     @Caching(evict = {
-            @CacheEvict(value = "bookIssued", key = "#id"),
-            @CacheEvict(value = "booksIssued", allEntries = true)
+            @CacheEvict(value = "issuedBook", key = "#id"),
+            @CacheEvict(value = "issuedBooks", allEntries = true)
     })
-    public void deleteById(String id) {
-        log.info("Deleting issued book with ID {}", id);
-        bookIssuedRepository.deleteById(id);
+    public void deleteById(String issuedId, String userName) {
+        Optional<User> userOptional = userRepository.findByUserName(userName);
+        if (userOptional.isEmpty()) {
+            throw new UserNotFoundException("User not found or may be deleted");
+        }
+
+        Optional<BookIssued> bookIssuedOptional = bookIssuedRepository.findById(issuedId);
+        if(bookIssuedOptional.isEmpty()) {
+            throw new BookIssuedNotFoundException("Issued book not found");
+        }
+
+        BookIssued bookIssued = bookIssuedOptional.get();
+
+        Optional<Book> bookOptional = bookRepository.findById(bookIssued.getBookId());
+        if(bookOptional.isEmpty()){
+            throw new BookNotFoundException("Book not found");
+        }
+
+        User user = userOptional.get();
+        Book book = bookOptional.get();
+
+        boolean removed = user.getBookIssuedList().removeIf(b -> b.getIssuedId().equals(issuedId));
+        if (!removed) {
+            throw  new BookIssuedNotFoundException("Issued book not found for this user");
+        }
+
+        book.setAvailableCopies(book.getAvailableCopies() + 1);
+        bookRepository.save(book);
+        userRepository.save(user);
+        bookIssuedRepository.deleteById(issuedId);
     }
 }

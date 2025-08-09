@@ -1,6 +1,9 @@
 package com.libraryManagementSystem.services;
 
+import com.libraryManagementSystem.dto.BookDto;
 import com.libraryManagementSystem.entity.Book;
+import com.libraryManagementSystem.exception.BookDeletionException;
+import com.libraryManagementSystem.exception.BookNotFoundException;
 import com.libraryManagementSystem.repository.BookRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
@@ -11,16 +14,47 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
-public class BookServiceImpl {
+public class BookServiceImpl implements BookService{
 
     @Autowired
     private BookRepository bookRepository;
 
+    @CachePut(value = "book", key = "#result.bookId")
+    @CacheEvict(value = "books", allEntries = true)
+    public Book createBook(BookDto bookDto){
+        Book newBook = new Book();
+        newBook.setBookId(UUID.randomUUID().toString());
+        newBook.setBookName(bookDto.getBookName());
+        newBook.setAuthorName(bookDto.getAuthorName());
+        newBook.setBranch(bookDto.getBranch());
+        newBook.setSemester(bookDto.getSemester());
+        newBook.setAvailableCopies(bookDto.getAvailableCopies());
+        newBook.setTotalCopies(bookDto.getTotalCopies());
+        bookRepository.save(newBook);
+        return newBook;
+    }
+
     @Cacheable(value = "book", key = "#id")
-    public Optional<Book> findByBookId(String id) {
-        return bookRepository.findById(id);
+    public Book findByBookId(String id) {
+        Optional<Book> bookOptional = bookRepository.findById(id);
+        if(bookOptional.isEmpty()){
+            throw new BookNotFoundException("Book not found");
+        }
+        Book book = bookOptional.get();
+        return book;
+    }
+
+    @Cacheable(value = "book", key = "'name_' + #bookName")
+    public Book findByBookName(String bookName) {
+        Optional<Book> bookOptional = bookRepository.findByBookName(bookName);
+        if(bookOptional.isEmpty()){
+            throw new BookNotFoundException("Book not found");
+        }
+        Book book = bookOptional.get();
+        return book;
     }
 
     @Cacheable(value = "books")
@@ -28,15 +62,22 @@ public class BookServiceImpl {
         return bookRepository.findAll();
     }
 
-    @CachePut(value = "book", key = "#book.bookId")
+    @CachePut(value = "book", key = "#result.bookId")
     @CacheEvict(value = "books", allEntries = true)
-    public Book saveBook(Book book){
-        return bookRepository.save(book);
-    }
-
-    @Cacheable(value = "book", key = "'name_' + #bookName")
-    public Optional<Book> findByBookName(String bookName) {
-        return bookRepository.findByBookName(bookName);
+    public Book updateBook(BookDto bookDto, String id) {
+        Optional<Book> bookOptional = bookRepository.findById(id);
+        if(bookOptional.isEmpty()){
+            throw new BookNotFoundException("Book not found");
+        }
+        Book oldBook = bookOptional.get();
+        oldBook.setBookName(bookDto.getBookName());
+        oldBook.setAuthorName(bookDto.getAuthorName());
+        oldBook.setBranch(bookDto.getBranch());
+        oldBook.setSemester(bookDto.getSemester());
+        oldBook.setAvailableCopies(bookDto.getAvailableCopies());
+        oldBook.setTotalCopies(bookDto.getTotalCopies());
+        bookRepository.save(oldBook);
+        return oldBook;
     }
 
     @Cacheable(value = "books_by_semester_branch", key = "#semester + '-' + #branch")
@@ -50,6 +91,14 @@ public class BookServiceImpl {
             @CacheEvict(value = "books_by_semester_branch", allEntries = true)
     })
     public void deleteById(String id){
+        Optional<Book> bookOptional = bookRepository.findById(id);
+        if(bookOptional.isEmpty()){
+            throw new BookNotFoundException("Book not found");
+        }
+        Book book = bookOptional.get();
+        if (book.getAvailableCopies() != book.getTotalCopies()) {
+            throw  new BookDeletionException("Book is issued to someone, so it cannot be deleted");
+        }
         bookRepository.deleteById(id);
     }
 }
