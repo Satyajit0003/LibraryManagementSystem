@@ -2,6 +2,7 @@ package com.librarymanagementsystem.config;
 
 import com.librarymanagementsystem.filter.JwtFilter;
 import com.librarymanagementsystem.services.UserDetailsServiceImpl;
+import com.librarymanagementsystem.services.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -23,11 +24,13 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 @RequiredArgsConstructor
 public class SpringSecurity {
 
-    @Autowired
-    private UserDetailsServiceImpl userDetailsService;
+    private final UserDetailsServiceImpl userDetailsService;
+    private final JwtFilter jwtFilter;
 
-    @Autowired
-    private JwtFilter jwtFilter;
+    public SpringSecurity(UserDetailsServiceImpl userDetailsService, JwtFilter jwtFilter, UserDetailsServiceImpl userDetailsService1, JwtFilter jwtFilter1) {
+        this.userDetailsService = userDetailsService1;
+        this.jwtFilter = jwtFilter1;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
